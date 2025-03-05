@@ -21,7 +21,12 @@ jobs:
           gcloud auth activate-service-account --key-file=gcp-key.json
           gcloud config set project mmmm-452606
 
-      # ✅ GKE 인증 플러그인 없이 kubectl 사용
+      # ✅ GKE 인증 플러그인 설치
+      - name: Install GKE authentication plugin
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-cloud-cli-gke-gcloud-auth-plugin
+
       - name: Set up kubectl
         run: |
           gcloud container clusters get-credentials gke-ci-cd-cluster --region us-central1-a
