@@ -1,0 +1,26 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Authenticate to GCP
+        run: echo ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }} | gcloud auth activate-service-account --key-file=-
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t gcr.io/mmmm-452606/gke-ci-cd-demo:$GITHUB_SHA .
+          docker push gcr.io/mmmm-452606/gke-ci-cd-demo:$GITHUB_SHA
+
+      - name: Deploy to GKE
+        run: |
+          gcloud container clusters get-credentials gke-ci-cd-cluster --zone us-central1-a --project mmmm-452606
+          kubectl set image deployment/gke-ci-cd-demo gke-ci-cd-demo=gcr.io/mmmm-452606/gke-ci-cd-demo:$GITHUB_SHA
