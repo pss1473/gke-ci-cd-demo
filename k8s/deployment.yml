@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gke-ci-cd-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gke-ci-cd-demo
+  template:
+    metadata:
+      labels:
+        app: gke-ci-cd-demo
+    spec:
+      containers:
+      - name: gke-ci-cd-demo
+        image: gcr.io/mmmm-452606/gke-ci-cd-demo:v1  # GCR에 push된 Docker 이미지
+        ports:
+        - containerPort: 80
