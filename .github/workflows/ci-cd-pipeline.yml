@@ -3,7 +3,7 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main
+      - main  # main 브랜치에 푸시될 때마다 실행
 
 jobs:
   deploy:
@@ -20,3 +20,17 @@ jobs:
           echo "$GCP_SERVICE_KEY" > gcp-key.json
           gcloud auth activate-service-account --key-file=gcp-key.json
           gcloud config set project mmmm-452606
+
+      - name: Set up kubectl
+        run: |
+          gcloud container clusters get-credentials gke-ci-cd-cluster --region us-central1-a
+
+      - name: Deploy to GKE
+        run: |
+          kubectl apply -f k8s/deployment.yml  # GKE에 배포할 Deployment 파일
+          kubectl apply -f k8s/service.yml     # GKE에 서비스 설정 파일
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods
+          kubectl get svc gke-ci-cd-demo-service
