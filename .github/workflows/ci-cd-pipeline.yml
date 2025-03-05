@@ -22,10 +22,11 @@ jobs:
           gcloud config set project mmmm-452606
 
       # ✅ GKE 인증 플러그인 설치
-      - name: Install gke-gcloud-auth-plugin
+      - name: Install GKE authentication plugin
         run: |
-          gcloud components install gke-gcloud-auth-plugin
-          gcloud components update
+          sudo apt-get update
+          sudo apt-get install -y google-cloud-cli-gke-gcloud-auth-plugin
+
 
       - name: Set up kubectl
         run: |
