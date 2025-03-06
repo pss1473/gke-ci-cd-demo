@@ -1,36 +1,53 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline for GKE
 
 on:
   push:
     branches:
-      - main  # main 브랜치에 푸시될 때마다 실행
+      - main  # main 브랜치에 push될 때 실행
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
+      # 1️⃣ Google Cloud 인증
       - name: Authenticate with Google Cloud
-        env:
-          GCP_SERVICE_KEY: ${{ secrets.GCP_SERVICE_KEY }}
-        run: |
-          echo "$GCP_SERVICE_KEY" > gcp-key.json
-          gcloud auth activate-service-account --key-file=gcp-key.json
-          gcloud config set project mmmm-452606
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_KEY }}
 
-      - name: Set up kubectl
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT }}
+
+      # 2️⃣ gke-gcloud-auth-plugin 설치 (에러 해결)
+      - name: Install gke-gcloud-auth-plugin
+        run: |
+          gcloud components install gke-gcloud-auth-plugin
+          echo "export USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
+
+      # 3️⃣ Docker 빌드 & Artifact Registry Push
+      - name: Build and Push Docker Image
+        env:
+          IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT }}/my-app
+        run: |
+          gcloud auth configure-docker
+          docker build -t $IMAGE_NAME:$GITHUB_SHA .
+          docker push $IMAGE_NAME:$GITHUB_SHA
+
+      # 4️⃣ GKE 클러스터 인증
+      - name: Configure kubectl
         run: |
           gcloud container clusters get-credentials gke-ci-cd-cluster --region us-central1-a
 
+      # 5️⃣ Kubernetes Deployment 적용
       - name: Deploy to GKE
+        env:
+          IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT }}/my-app
         run: |
-          kubectl apply -f k8s/deployment.yml  # GKE에 배포할 Deployment 파일
-          kubectl apply -f k8s/service.yml     # GKE에 서비스 설정 파일
-
-      - name: Verify deployment
-        run: |
-          kubectl get pods
-          kubectl get svc gke-ci-cd-demo-service
+          sed -i "s|IMAGE_PLACEHOLDER|$IMAGE_NAME:$GITHUB_SHA|g" k8s/deployment.yml
+          kubectl apply -f k8s/deployment.yml
