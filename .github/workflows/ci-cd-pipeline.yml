@@ -24,17 +24,21 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT }}
 
-      # 2️⃣ gke-gcloud-auth-plugin 설치 (에러 해결)
+      # 2️⃣ gke-gcloud-auth-plugin 설치 (kubectl 인증 문제 해결)
       - name: Install gke-gcloud-auth-plugin
         run: |
           gcloud components install gke-gcloud-auth-plugin
           echo "export USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
 
-      # 3️⃣ Docker 빌드 & Artifact Registry Push
+      # 3️⃣ Docker 빌드 & Artifact Registry Push (GCP_PROJECT 검증 추가)
       - name: Build and Push Docker Image
         env:
           IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT }}/my-app
         run: |
+          if [ -z "${{ secrets.GCP_PROJECT }}" ]; then 
+            echo "❌ ERROR: GCP_PROJECT is not set!"
+            exit 1
+          fi
           gcloud auth configure-docker
           docker build -t $IMAGE_NAME:$GITHUB_SHA .
           docker push $IMAGE_NAME:$GITHUB_SHA
