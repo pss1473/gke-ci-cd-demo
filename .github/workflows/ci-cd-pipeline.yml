@@ -30,7 +30,7 @@ jobs:
           gcloud components install gke-gcloud-auth-plugin
           echo "export USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
 
-      # 3️⃣ Docker 빌드 & Artifact Registry Push (GCP_PROJECT 검증 추가)
+      # 3️⃣ Docker 빌드 & GCR Push (`latest` 태그 포함)
       - name: Build and Push Docker Image
         env:
           IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT }}/my-app
@@ -39,19 +39,20 @@ jobs:
             echo "❌ ERROR: GCP_PROJECT is not set!"
             exit 1
           fi
-          gcloud auth configure-docker
-          docker build -t $IMAGE_NAME:$GITHUB_SHA .
+          gcloud auth configure-docker gcr.io
+          docker build -t $IMAGE_NAME:$GITHUB_SHA -t $IMAGE_NAME:latest .
           docker push $IMAGE_NAME:$GITHUB_SHA
+          docker push $IMAGE_NAME:latest
 
       # 4️⃣ GKE 클러스터 인증
       - name: Configure kubectl
         run: |
           gcloud container clusters get-credentials gke-ci-cd-cluster --region us-central1-a
 
-      # 5️⃣ Kubernetes Deployment 적용
+      # 5️⃣ Kubernetes Deployment 적용 (`latest` 태그 사용)
       - name: Deploy to GKE
         env:
           IMAGE_NAME: gcr.io/${{ secrets.GCP_PROJECT }}/my-app
         run: |
-          sed -i "s|IMAGE_PLACEHOLDER|$IMAGE_NAME:$GITHUB_SHA|g" k8s/deployment.yml
+          sed -i "s|IMAGE_PLACEHOLDER|$IMAGE_NAME:latest|g" k8s/deployment.yml
           kubectl apply -f k8s/deployment.yml

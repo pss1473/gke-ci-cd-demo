@@ -14,6 +14,7 @@ spec:
     spec:
       containers:
       - name: gke-ci-cd-demo
-        image: gcr.io/mmmm-452606/gke-ci-cd-demo:v1  # GCR에 push된 Docker 이미지
+        image: gcr.io/mmmm-452606/my-app:latest  # ✅ 프로젝트 ID & 이미지명 확인
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
